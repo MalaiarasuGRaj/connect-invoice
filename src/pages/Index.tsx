@@ -1,12 +1,13 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { FileDown, Save, RotateCcw, FileText } from "lucide-react";
+import { FileDown, Save, RotateCcw, FileText, Shield } from "lucide-react";
 import InvoiceForm from "@/components/InvoiceForm";
 import InvoicePreview from "@/components/InvoicePreview";
-import InvoiceRepository from "@/components/InvoiceRepository";
 import type { InvoiceData } from "@/types/invoice";
 import { createDefaultBillingRows, generateInvoiceNumber } from "@/types/invoice";
+import { supabase } from "@/lib/supabase";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
@@ -29,94 +30,125 @@ function createBlankInvoice(): InvoiceData {
   };
 }
 
-const STORAGE_KEY = "trainer-invoices";
-
-function loadInvoices(): InvoiceData[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveInvoices(invoices: InvoiceData[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(invoices));
-}
-
 export default function Index() {
   const [invoice, setInvoice] = useState<InvoiceData>(createBlankInvoice);
-  const [invoices, setInvoices] = useState<InvoiceData[]>(loadInvoices);
+  const [saving, setSaving] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    saveInvoices(invoices);
-  }, [invoices]);
+  const navigate = useNavigate();
 
   const handleClear = useCallback(() => {
     setInvoice(createBlankInvoice());
     toast.success("Form cleared");
   }, []);
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     if (!invoice.trainerName.trim()) {
       toast.error("Trainer name is required");
       return;
     }
-    const saved = { ...invoice, createdAt: new Date().toISOString() };
-    setInvoices((prev) => [saved, ...prev]);
-    setInvoice(createBlankInvoice());
-    toast.success("Invoice saved to repository");
+    setSaving(true);
+    try {
+      // Insert invoice
+      const { data: invData, error: invError } = await supabase
+        .from("invoices")
+        .insert({
+          invoice_number: invoice.invoiceNumber,
+          trainer_name: invoice.trainerName,
+          email: invoice.email,
+          mobile: invoice.mobile,
+          pan: invoice.pan,
+          invoice_date: invoice.invoiceDate || null,
+          project_name: invoice.projectName,
+          subtotal: invoice.subtotal,
+          total: invoice.grandTotal,
+          notes: invoice.notes,
+        })
+        .select("id")
+        .single();
+
+      if (invError) throw invError;
+      const invoiceId = invData.id;
+
+      // Insert billing items
+      const items = invoice.billingRows
+        .filter((r) => !r.isAttachRow)
+        .map((r) => ({
+          invoice_id: invoiceId,
+          description: r.description,
+          quantity: r.quantity,
+          rate: r.rate,
+          total: r.total,
+        }));
+
+      if (items.length > 0) {
+        const { error: itemsError } = await supabase.from("invoice_items").insert(items);
+        if (itemsError) throw itemsError;
+      }
+
+      // Upload attachments
+      for (const att of invoice.attachments) {
+        const filePath = `${invoiceId}/${att.id}-${att.name}`;
+        // Convert dataUrl to blob
+        const res = await fetch(att.dataUrl);
+        const blob = await res.blob();
+        
+        const { error: uploadError } = await supabase.storage
+          .from("invoice-attachments")
+          .upload(filePath, blob);
+
+        if (uploadError) {
+          console.error("Upload error:", uploadError);
+          continue;
+        }
+
+        const { data: urlData } = supabase.storage
+          .from("invoice-attachments")
+          .getPublicUrl(filePath);
+
+        await supabase.from("attachments").insert({
+          invoice_id: invoiceId,
+          file_name: att.name,
+          file_url: urlData.publicUrl,
+        });
+      }
+
+      setInvoice(createBlankInvoice());
+      toast.success("Invoice saved successfully!");
+    } catch (err: any) {
+      console.error("Save error:", err);
+      toast.error("Failed to save invoice: " + (err.message || "Unknown error"));
+    } finally {
+      setSaving(false);
+    }
   }, [invoice]);
 
-  const handleDownload = useCallback(
-    async (inv?: InvoiceData) => {
-      const target = inv || invoice;
-      if (!target.trainerName.trim()) {
-        toast.error("Trainer name is required to download");
-        return;
-      }
+  const handleDownload = useCallback(async () => {
+    if (!invoice.trainerName.trim()) {
+      toast.error("Trainer name is required to download");
+      return;
+    }
+    if (!previewRef.current) return;
 
-      // If downloading a repo invoice, temporarily render it
-      if (inv) {
-        setInvoice(inv);
-        await new Promise((r) => setTimeout(r, 100));
-      }
-
-      if (!previewRef.current) return;
-
-      try {
-        toast.loading("Generating PDF...");
-        const canvas = await html2canvas(previewRef.current, {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: "#ffffff",
-        });
-        const imgData = canvas.toDataURL("image/png");
-        const pdf = new jsPDF("p", "mm", "a4");
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`${target.invoiceNumber}-${target.trainerName}.pdf`);
-        toast.dismiss();
-        toast.success("PDF downloaded");
-      } catch {
-        toast.dismiss();
-        toast.error("Failed to generate PDF");
-      }
-    },
-    [invoice]
-  );
-
-  const handleView = useCallback((inv: InvoiceData) => {
-    setInvoice(inv);
-    toast.info("Invoice loaded into preview");
-  }, []);
-
-  const handleDelete = useCallback((id: string) => {
-    setInvoices((prev) => prev.filter((i) => i.id !== id));
-    toast.success("Invoice deleted");
-  }, []);
+    try {
+      toast.loading("Generating PDF...");
+      const canvas = await html2canvas(previewRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+      });
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`${invoice.invoiceNumber}-${invoice.trainerName}.pdf`);
+      toast.dismiss();
+      toast.success("PDF downloaded");
+    } catch {
+      toast.dismiss();
+      toast.error("Failed to generate PDF");
+    }
+  }, [invoice]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -141,27 +173,10 @@ export default function Index() {
               variant="ghost"
               size="sm"
               className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10 text-xs"
-              onClick={handleClear}
+              onClick={() => navigate("/admin/login")}
             >
-              <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-              Clear
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10 text-xs"
-              onClick={handleSave}
-            >
-              <Save className="h-3.5 w-3.5 mr-1.5" />
-              Save
-            </Button>
-            <Button
-              size="sm"
-              className="bg-primary-foreground/20 hover:bg-primary-foreground/30 text-primary-foreground text-xs border-0"
-              onClick={() => handleDownload()}
-            >
-              <FileDown className="h-3.5 w-3.5 mr-1.5" />
-              Download PDF
+              <Shield className="h-3.5 w-3.5 mr-1.5" />
+              Admin
             </Button>
           </div>
         </div>
@@ -175,23 +190,45 @@ export default function Index() {
             <InvoiceForm data={invoice} onChange={setInvoice} />
           </div>
 
-          {/* Right - Preview + Repository */}
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                Live Preview
-              </h2>
-              <div className="overflow-auto max-h-[700px] rounded-lg border">
-                <InvoicePreview ref={previewRef} data={invoice} />
-              </div>
+          {/* Right - Preview */}
+          <div className="space-y-4">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+              Live Preview
+            </h2>
+            <div className="overflow-auto max-h-[700px] rounded-lg border">
+              <InvoicePreview ref={previewRef} data={invoice} />
             </div>
 
-            <InvoiceRepository
-              invoices={invoices}
-              onView={handleView}
-              onDownload={handleDownload}
-              onDelete={handleDelete}
-            />
+            {/* Action Buttons - Under Preview */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs"
+                onClick={handleClear}
+              >
+                <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                Clear Form
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs"
+                onClick={handleSave}
+                disabled={saving}
+              >
+                <Save className="h-3.5 w-3.5 mr-1.5" />
+                {saving ? "Saving..." : "Save Invoice"}
+              </Button>
+              <Button
+                size="sm"
+                className="text-xs"
+                onClick={handleDownload}
+              >
+                <FileDown className="h-3.5 w-3.5 mr-1.5" />
+                Download PDF
+              </Button>
+            </div>
           </div>
         </div>
       </main>
