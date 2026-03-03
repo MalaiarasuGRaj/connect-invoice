@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useAuth } from '@/contexts/AuthContext';
+import { useUser, useClerk } from '@clerk/clerk-react';
 import { supabase } from '@/lib/supabase';
 import InvoicePreview from '@/components/InvoicePreview';
 import { createDefaultBillingRows } from '@/types/invoice';
@@ -17,7 +17,6 @@ import {
 import { toast } from 'sonner';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-
 interface DbInvoice {
   id: string;
   invoice_number: string;
@@ -84,7 +83,8 @@ function dbToInvoice(inv: DbInvoice, items: DbItem[], attachments: DbAttachment[
 }
 
 export default function AdminDashboard() {
-  const { user, isAdmin, loading: authLoading, signOut } = useAuth();
+  const { user, isLoaded } = useUser();
+  const { signOut } = useClerk();
   const navigate = useNavigate();
   const [invoices, setInvoices] = useState<InvoiceData[]>([]);
   const [loadingData, setLoadingData] = useState(true);
@@ -94,14 +94,12 @@ export default function AdminDashboard() {
   const previewRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!authLoading && (!user || !isAdmin)) {
+    if (isLoaded && !user) {
       navigate('/admin/login');
+    } else if (isLoaded && user) {
+      fetchInvoices();
     }
-  }, [authLoading, user, isAdmin, navigate]);
-
-  useEffect(() => {
-    if (user && isAdmin) fetchInvoices();
-  }, [user, isAdmin]);
+  }, [isLoaded, user, navigate]);
 
   const fetchInvoices = async () => {
     setLoadingData(true);
@@ -183,7 +181,7 @@ export default function AdminDashboard() {
     });
   }, [invoices, search, monthFilter]);
 
-  if (authLoading) {
+  if (!isLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -232,7 +230,7 @@ export default function AdminDashboard() {
               variant="ghost"
               size="sm"
               className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10 text-xs"
-              onClick={async () => { await signOut(); navigate('/'); }}
+              onClick={async () => { await signOut({ redirectUrl: '/' }); }}
             >
               <LogOut className="h-3.5 w-3.5 mr-1.5" />
               Logout

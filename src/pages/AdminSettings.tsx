@@ -1,50 +1,13 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-import { Settings, ArrowLeft, Loader2, KeyRound } from 'lucide-react';
-import { toast } from 'sonner';
+import { UserProfile } from '@clerk/clerk-react';
+import { Settings, ArrowLeft } from 'lucide-react';
 
 export default function AdminSettings() {
-  const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  if (!user || !isAdmin) {
-    navigate('/admin/login');
-    return null;
-  }
-
-  const handleChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newPassword.length < 6) {
-      toast.error('Password must be at least 6 characters');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
-    }
-    setLoading(true);
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    setLoading(false);
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success('Password updated successfully');
-      setNewPassword('');
-      setConfirmPassword('');
-    }
-  };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <header className="gradient-header sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -72,50 +35,31 @@ export default function AdminSettings() {
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-4 py-12">
-        <Card className="shadow-elevated">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <KeyRound className="h-4 w-4 text-primary" />
-              Change Password
-            </CardTitle>
-            <CardDescription>
-              Logged in as: {user.email}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleChangePassword} className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="newPassword" className="text-xs font-medium text-muted-foreground">
-                  New Password
-                </Label>
-                <Input
-                  id="newPassword"
-                  type="password"
-                  placeholder="••••••••"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="confirmPassword" className="text-xs font-medium text-muted-foreground">
-                  Confirm Password
-                </Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Update Password
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+      <main className="flex-1 flex items-center justify-center py-12 px-4">
+        <UserProfile
+          routing="path"
+          path="/admin/settings"
+          appearance={{
+            elements: {
+              rootBox: "mx-auto shadow-elevated rounded-xl max-w-4xl w-full",
+              card: "bg-card border-border",
+              navbar: "border-r border-border",
+              navbarButton: "text-foreground hover:bg-accent",
+              headerTitle: "text-foreground",
+              headerSubtitle: "text-muted-foreground",
+              profileSectionTitleText: "text-foreground font-semibold",
+              profileSectionContent: "text-muted-foreground",
+              formButtonPrimary: "gradient-primary text-primary-foreground",
+              formFieldLabel: "text-foreground",
+              formFieldInput: "bg-background border-border text-foreground",
+              accordionTriggerButton: "text-foreground",
+              userPreviewMainIdentifier: "text-foreground",
+              userPreviewSecondaryIdentifier: "text-muted-foreground",
+              breadcrumbsItem: "text-muted-foreground",
+              breadcrumbsItemCurrent: "text-foreground"
+            }
+          }}
+        />
       </main>
     </div>
   );

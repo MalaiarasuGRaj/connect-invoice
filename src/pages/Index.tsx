@@ -91,7 +91,7 @@ export default function Index() {
         // Convert dataUrl to blob
         const res = await fetch(att.dataUrl);
         const blob = await res.blob();
-        
+
         const { error: uploadError } = await supabase.storage
           .from("invoice-attachments")
           .upload(filePath, blob);
@@ -130,6 +130,47 @@ export default function Index() {
     if (!previewRef.current) return;
 
     try {
+      // Auto-save first
+      toast.loading("Saving invoice...");
+      const { data: invData, error: invError } = await supabase
+        .from("invoices")
+        .insert({
+          invoice_number: invoice.invoiceNumber,
+          trainer_name: invoice.trainerName,
+          email: invoice.email,
+          mobile: invoice.mobile,
+          pan: invoice.pan,
+          invoice_date: invoice.invoiceDate || null,
+          project_name: invoice.projectName,
+          subtotal: invoice.subtotal,
+          total: invoice.grandTotal,
+          notes: invoice.notes,
+        })
+        .select("id")
+        .single();
+
+      if (invError) {
+        console.error("Auto-save error:", invError);
+        throw new Error("Could not save to database: " + invError.message);
+      }
+
+      const invoiceId = invData.id;
+      const items = invoice.billingRows
+        .filter((r) => !r.isAttachRow)
+        .map((r) => ({
+          invoice_id: invoiceId,
+          description: r.description,
+          quantity: r.quantity,
+          rate: r.rate,
+          total: r.total,
+        }));
+
+      if (items.length > 0) {
+        const { error: itemsError } = await supabase.from("invoice_items").insert(items);
+        if (itemsError) throw itemsError;
+      }
+
+      toast.dismiss();
       toast.loading("Generating PDF...");
       const canvas = await html2canvas(previewRef.current, {
         scale: 2,
@@ -143,10 +184,11 @@ export default function Index() {
       pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
       pdf.save(`${invoice.invoiceNumber}-${invoice.trainerName}.pdf`);
       toast.dismiss();
-      toast.success("PDF downloaded");
-    } catch {
+      toast.success("Invoice saved and PDF downloaded");
+    } catch (err: any) {
       toast.dismiss();
-      toast.error("Failed to generate PDF");
+      console.error("Download/Save error:", err);
+      toast.error("Process failed: " + (err.message || "Unknown error"));
     }
   }, [invoice]);
 
