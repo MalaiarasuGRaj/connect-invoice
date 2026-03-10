@@ -18,25 +18,29 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <SignedIn>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/settings" element={<AdminSettings />} />
-            <Route path="/admin/login" element={<AdminLogin />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </SignedIn>
-        <SignedOut>
-          <Routes>
-            <Route path="/admin/login" element={<AdminLogin />} />
-            <Route path="*" element={
-              <div className="min-h-screen bg-background flex items-center justify-center p-4">
-                <RedirectToSignIn />
-              </div>
-            } />
-          </Routes>
-        </SignedOut>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route
+            path="/admin/*"
+            element={
+              <>
+                <SignedIn>
+                  <Routes>
+                    <Route path="/" element={<AdminDashboard />} />
+                    <Route path="/settings" element={<AdminSettings />} />
+                    <Route path="/login" element={<AdminLogin />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </SignedIn>
+                <SignedOut>
+                  <RedirectToSignIn />
+                </SignedOut>
+              </>
+            }
+          />
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

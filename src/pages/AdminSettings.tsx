@@ -1,10 +1,11 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { UserProfile } from '@clerk/clerk-react';
+import { UserProfile, useClerk } from '@clerk/clerk-react';
 import { Settings, ArrowLeft } from 'lucide-react';
 
 export default function AdminSettings() {
   const navigate = useNavigate();
+  const { signOut } = useClerk();
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -16,7 +17,7 @@ export default function AdminSettings() {
             </div>
             <div>
               <h1 className="text-lg font-bold text-primary-foreground tracking-tight">
-                Admin Settings
+                Repository Settings
               </h1>
               <p className="text-[11px] text-primary-foreground/70">
                 Manage your account
@@ -27,10 +28,13 @@ export default function AdminSettings() {
             variant="ghost"
             size="sm"
             className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10 text-xs"
-            onClick={() => navigate('/admin')}
+            onClick={async () => {
+              await signOut();
+              navigate('/');
+            }}
           >
             <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
-            Back to Dashboard
+            Back to Home
           </Button>
         </div>
       </header>

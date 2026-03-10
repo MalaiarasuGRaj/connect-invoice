@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { FileDown, Save, RotateCcw, FileText, Shield } from "lucide-react";
+import { FileDown, Save, RotateCcw, FileText, Shield, Archive } from "lucide-react";
 import InvoiceForm from "@/components/InvoiceForm";
 import InvoicePreview from "@/components/InvoicePreview";
 import type { InvoiceData } from "@/types/invoice";
@@ -215,10 +215,10 @@ export default function Index() {
               variant="ghost"
               size="sm"
               className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10 text-xs"
-              onClick={() => navigate("/admin/login")}
+              onClick={() => navigate("/admin")}
             >
-              <Shield className="h-3.5 w-3.5 mr-1.5" />
-              Admin
+              <Archive className="h-3.5 w-3.5 mr-1.5" />
+              Repository
             </Button>
           </div>
         </div>

@@ -200,10 +200,10 @@ export default function AdminDashboard() {
             </div>
             <div>
               <h1 className="text-lg font-bold text-primary-foreground tracking-tight">
-                Admin Dashboard
+                Invoice Repository
               </h1>
               <p className="text-[11px] text-primary-foreground/70">
-                Invoice Repository
+                Manage Invoices
               </p>
             </div>
           </div>
@@ -212,7 +212,10 @@ export default function AdminDashboard() {
               variant="ghost"
               size="sm"
               className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10 text-xs"
-              onClick={() => navigate('/')}
+              onClick={async () => {
+                await signOut();
+                navigate('/');
+              }}
             >
               <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
               Invoice Form
@@ -225,15 +228,6 @@ export default function AdminDashboard() {
             >
               <Settings className="h-3.5 w-3.5 mr-1.5" />
               Settings
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10 text-xs"
-              onClick={async () => { await signOut({ redirectUrl: '/' }); }}
-            >
-              <LogOut className="h-3.5 w-3.5 mr-1.5" />
-              Logout
             </Button>
           </div>
         </div>
@@ -387,6 +381,6 @@ export default function AdminDashboard() {
           </div>
         </div>
       </main>
-    </div>
+    </div >
   );
 }
