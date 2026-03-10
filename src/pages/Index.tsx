@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { FileDown, Save, RotateCcw, FileText, Shield, Archive } from "lucide-react";
 import InvoiceForm from "@/components/InvoiceForm";
-import InvoicePreview from "@/components/InvoicePreview";
+import A4InvoiceTemplate from "@/components/A4InvoiceTemplate";
 import type { InvoiceData } from "@/types/invoice";
 import { createDefaultBillingRows, generateInvoiceNumber } from "@/types/invoice";
 import { supabase } from "@/lib/supabase";
@@ -237,8 +237,10 @@ export default function Index() {
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
               Live Preview
             </h2>
-            <div className="overflow-auto max-h-[700px] rounded-lg border">
-              <InvoicePreview ref={previewRef} data={invoice} />
+            <div className="overflow-auto max-h-[750px] rounded-lg border bg-muted/30 p-4">
+              <div className="mx-auto" style={{ width: "fit-content" }}>
+                <A4InvoiceTemplate ref={previewRef} data={invoice} />
+              </div>
             </div>
 
             {/* Action Buttons - Under Preview */}

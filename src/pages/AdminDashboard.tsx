@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useUser, useClerk } from '@clerk/clerk-react';
 import { supabase } from '@/lib/supabase';
-import InvoicePreview from '@/components/InvoicePreview';
+import A4InvoiceTemplate from '@/components/A4InvoiceTemplate';
 import { createDefaultBillingRows } from '@/types/invoice';
 import type { InvoiceData, BillingRow } from '@/types/invoice';
 import {
@@ -343,8 +343,10 @@ export default function AdminDashboard() {
                     </Button>
                   </div>
                 </div>
-                <div className="overflow-auto max-h-[700px] rounded-lg border">
-                  <InvoicePreview ref={previewRef} data={viewInvoice} />
+                <div className="overflow-auto max-h-[750px] rounded-lg border bg-muted/30 p-4">
+                  <div className="mx-auto" style={{ width: "fit-content" }}>
+                    <A4InvoiceTemplate ref={previewRef} data={viewInvoice} />
+                  </div>
                 </div>
 
                 {/* Attachments */}
