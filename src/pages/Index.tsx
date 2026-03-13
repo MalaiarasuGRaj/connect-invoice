@@ -3,8 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { FileDown, Save, RotateCcw, FileText, Shield, Archive } from "lucide-react";
+import Logo from "@/components/Logo";
 import InvoiceForm from "@/components/InvoiceForm";
 import A4InvoiceTemplate from "@/components/A4InvoiceTemplate";
+import InvoicePreview from "@/components/InvoicePreview";
 import type { InvoiceData } from "@/types/invoice";
 import { createDefaultBillingRows, generateInvoiceNumber } from "@/types/invoice";
 import { supabase } from "@/lib/supabase";
@@ -198,9 +200,7 @@ export default function Index() {
       <header className="gradient-header sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-primary-foreground/20 flex items-center justify-center">
-              <FileText className="h-5 w-5 text-primary-foreground" />
-            </div>
+            <Logo />
             <div>
               <h1 className="text-lg font-bold text-primary-foreground tracking-tight">
                 Trainer Invoice Manager
@@ -238,9 +238,9 @@ export default function Index() {
               Live Preview
             </h2>
             <div className="overflow-auto max-h-[750px] rounded-lg border bg-muted/30 p-4">
-              <div className="mx-auto" style={{ width: "fit-content" }}>
+              <InvoicePreview>
                 <A4InvoiceTemplate ref={previewRef} data={invoice} />
-              </div>
+              </InvoicePreview>
             </div>
 
             {/* Action Buttons - Under Preview */}

@@ -39,7 +39,7 @@ export interface InvoiceData {
 
 export const COMPANY = {
   name: "CONNECT Training Solutions (P) Limited",
-  address: "110 10/5, Xavier Street, Barani Nagar, Vannarpettai, Tirunelveli-627003",
+  address: "110E 10/5, Xavier Street, Barani Nagar, Vannarpettai, Tirunelveli-627003",
   contact: "+91 9600965961",
 } as const;
 
@@ -66,21 +66,11 @@ export function createDefaultBillingRows(): BillingRow[] {
     {
       id: "travel",
       description: "⭐ Travel — If applicable",
-      quantity: null,
-      rate: null,
+      quantity: 1,
+      rate: 0,
       total: 0,
-      editable: { quantity: false, rate: false },
+      editable: { quantity: false, rate: true },
       applicable: true,
-    },
-    {
-      id: "attach-bills",
-      description: "⭐ Attach Bills",
-      quantity: null,
-      rate: null,
-      total: 0,
-      editable: { quantity: false, rate: false },
-      applicable: true,
-      isAttachRow: true,
     },
   ];
 }

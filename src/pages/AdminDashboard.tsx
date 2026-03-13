@@ -8,12 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useUser, useClerk } from '@clerk/clerk-react';
 import { supabase } from '@/lib/supabase';
 import A4InvoiceTemplate from '@/components/A4InvoiceTemplate';
+import InvoicePreview from '@/components/InvoicePreview';
 import { createDefaultBillingRows } from '@/types/invoice';
 import type { InvoiceData, BillingRow } from '@/types/invoice';
 import {
   Archive, Search, Download, Trash2, Eye, LogOut, Settings,
   FileText, Loader2, ArrowLeft, Paperclip, X,
 } from 'lucide-react';
+import Logo from '@/components/Logo';
 import { toast } from 'sonner';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -195,9 +197,7 @@ export default function AdminDashboard() {
       <header className="gradient-header sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-primary-foreground/20 flex items-center justify-center">
-              <Archive className="h-5 w-5 text-primary-foreground" />
-            </div>
+            <Logo />
             <div>
               <h1 className="text-lg font-bold text-primary-foreground tracking-tight">
                 Invoice Repository
@@ -344,9 +344,9 @@ export default function AdminDashboard() {
                   </div>
                 </div>
                 <div className="overflow-auto max-h-[750px] rounded-lg border bg-muted/30 p-4">
-                  <div className="mx-auto" style={{ width: "fit-content" }}>
+                  <InvoicePreview>
                     <A4InvoiceTemplate ref={previewRef} data={viewInvoice} />
-                  </div>
+                  </InvoicePreview>
                 </div>
 
                 {/* Attachments */}
