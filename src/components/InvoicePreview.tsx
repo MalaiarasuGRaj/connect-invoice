@@ -51,7 +51,7 @@ export default function InvoicePreview({ children }: InvoicePreviewProps) {
         style={{ 
           transform: `scale(${scale})`, 
           transformOrigin: "top center",
-          width: "210mm", // Match the fixed width of the template
+          width: "794px", // Match the fixed width of the template
         }}
       >
         {children}

@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { FileDown, Save, RotateCcw, FileText, Shield, Archive } from "lucide-react";
+import { FileDown, RotateCcw, Archive } from "lucide-react";
 import Logo from "@/components/Logo";
 import InvoiceForm from "@/components/InvoiceForm";
 import A4InvoiceTemplate from "@/components/A4InvoiceTemplate";
@@ -10,8 +10,8 @@ import InvoicePreview from "@/components/InvoicePreview";
 import type { InvoiceData } from "@/types/invoice";
 import { createDefaultBillingRows, generateInvoiceNumber } from "@/types/invoice";
 import { supabase } from "@/lib/supabase";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
+import { generatePDF } from "@/lib/generatePdf";
+
 
 function createBlankInvoice(): InvoiceData {
   return {
@@ -34,7 +34,6 @@ function createBlankInvoice(): InvoiceData {
 
 export default function Index() {
   const [invoice, setInvoice] = useState<InvoiceData>(createBlankInvoice);
-  const [saving, setSaving] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
@@ -43,86 +42,6 @@ export default function Index() {
     toast.success("Form cleared");
   }, []);
 
-  const handleSave = useCallback(async () => {
-    if (!invoice.trainerName.trim()) {
-      toast.error("Trainer name is required");
-      return;
-    }
-    setSaving(true);
-    try {
-      // Insert invoice
-      const { data: invData, error: invError } = await supabase
-        .from("invoices")
-        .insert({
-          invoice_number: invoice.invoiceNumber,
-          trainer_name: invoice.trainerName,
-          email: invoice.email,
-          mobile: invoice.mobile,
-          pan: invoice.pan,
-          invoice_date: invoice.invoiceDate || null,
-          project_name: invoice.projectName,
-          subtotal: invoice.subtotal,
-          total: invoice.grandTotal,
-          notes: invoice.notes,
-        })
-        .select("id")
-        .single();
-
-      if (invError) throw invError;
-      const invoiceId = invData.id;
-
-      // Insert billing items
-      const items = invoice.billingRows
-        .filter((r) => !r.isAttachRow)
-        .map((r) => ({
-          invoice_id: invoiceId,
-          description: r.description,
-          quantity: r.quantity,
-          rate: r.rate,
-          total: r.total,
-        }));
-
-      if (items.length > 0) {
-        const { error: itemsError } = await supabase.from("invoice_items").insert(items);
-        if (itemsError) throw itemsError;
-      }
-
-      // Upload attachments
-      for (const att of invoice.attachments) {
-        const filePath = `${invoiceId}/${att.id}-${att.name}`;
-        // Convert dataUrl to blob
-        const res = await fetch(att.dataUrl);
-        const blob = await res.blob();
-
-        const { error: uploadError } = await supabase.storage
-          .from("invoice-attachments")
-          .upload(filePath, blob);
-
-        if (uploadError) {
-          console.error("Upload error:", uploadError);
-          continue;
-        }
-
-        const { data: urlData } = supabase.storage
-          .from("invoice-attachments")
-          .getPublicUrl(filePath);
-
-        await supabase.from("attachments").insert({
-          invoice_id: invoiceId,
-          file_name: att.name,
-          file_url: urlData.publicUrl,
-        });
-      }
-
-      setInvoice(createBlankInvoice());
-      toast.success("Invoice saved successfully!");
-    } catch (err: any) {
-      console.error("Save error:", err);
-      toast.error("Failed to save invoice: " + (err.message || "Unknown error"));
-    } finally {
-      setSaving(false);
-    }
-  }, [invoice]);
 
   const handleDownload = useCallback(async () => {
     if (!invoice.trainerName.trim()) {
@@ -174,17 +93,10 @@ export default function Index() {
 
       toast.dismiss();
       toast.loading("Generating PDF...");
-      const canvas = await html2canvas(previewRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-      });
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF("p", "mm", "a4");
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`${invoice.invoiceNumber}-${invoice.trainerName}.pdf`);
+      await generatePDF(
+        previewRef.current,
+        `${invoice.invoiceNumber}-${invoice.trainerName}.pdf`
+      );
       toast.dismiss();
       toast.success("Invoice saved and PDF downloaded");
     } catch (err: any) {
@@ -253,16 +165,6 @@ export default function Index() {
               >
                 <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
                 Clear Form
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-xs"
-                onClick={handleSave}
-                disabled={saving}
-              >
-                <Save className="h-3.5 w-3.5 mr-1.5" />
-                {saving ? "Saving..." : "Save Invoice"}
               </Button>
               <Button
                 size="sm"

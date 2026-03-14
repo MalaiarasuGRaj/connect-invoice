@@ -17,8 +17,8 @@ import {
 } from 'lucide-react';
 import Logo from '@/components/Logo';
 import { toast } from 'sonner';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+import { generatePDF } from '@/lib/generatePdf';
+
 interface DbInvoice {
   id: string;
   invoice_number: string;
@@ -147,15 +147,10 @@ export default function AdminDashboard() {
     if (!previewRef.current || !viewInvoice) return;
     try {
       toast.loading('Generating PDF...');
-      const canvas = await html2canvas(previewRef.current, {
-        scale: 2, useCORS: true, backgroundColor: '#ffffff',
-      });
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`${viewInvoice.invoiceNumber}-${viewInvoice.trainerName}.pdf`);
+      await generatePDF(
+        previewRef.current,
+        `${viewInvoice.invoiceNumber}-${viewInvoice.trainerName}.pdf`
+      );
       toast.dismiss();
       toast.success('PDF downloaded');
     } catch {

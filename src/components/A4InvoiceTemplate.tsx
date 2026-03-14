@@ -22,9 +22,9 @@ const A4InvoiceTemplate = forwardRef<HTMLDivElement, A4InvoiceTemplateProps>(
             <div
                 ref={ref}
                 style={{
-                    width: "210mm",
-                    minHeight: "297mm",
-                    padding: "20mm",
+                    width: "794px",
+                    minHeight: "1123px",
+                    padding: "76px",
                     backgroundColor: "#ffffff",
                     color: "#1a1a2e",
                     fontFamily: "'Inter', 'Roboto', 'Helvetica', sans-serif",
